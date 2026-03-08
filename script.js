@@ -594,16 +594,30 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Kill background preview decoding to prevent modal stutter
                     stopPreview();
 
-                    // Assign src only when modal opens — avoids preloading 9 videos at once
+                    // Show modal first so user sees it immediately
+                    videoModal.classList.add('active');
+                    videoModal.setAttribute('aria-hidden', 'false');
+                    document.body.style.overflow = 'hidden';
+
+                    modalVideo.muted = false;
+
+                    // Remove any stale canplay listener, then wait for canplay before play()
+                    // play() after load() fails silently if called before browser has buffered data
+                    const onCanPlay = () => {
+                        modalVideo.play().catch(err => console.warn('Modal play blocked:', err));
+                    };
+                    modalVideo.addEventListener('canplay', onCanPlay, { once: true });
+
+                    // Assign src AFTER attaching the listener so we don't miss the event
                     modalVideo.src = videoSrc;
                     modalVideo.load();
 
-                    videoModal.classList.add('active');
-                    videoModal.setAttribute('aria-hidden', 'false');
-                    document.body.style.overflow = 'hidden'; // Lock background scrolling
-
-                    modalVideo.muted = false; // Unmute full feature playback
-                    modalVideo.play().catch(e => console.log("Modal play prevented:", e));
+                    // Safety fallback: if canplay hasn't fired in 3s, try playing anyway
+                    setTimeout(() => {
+                        if (modalVideo.paused && modalVideo.readyState >= 2) {
+                            modalVideo.play().catch(err => console.warn('Fallback play blocked:', err));
+                        }
+                    }, 3000);
                 }
             });
         });

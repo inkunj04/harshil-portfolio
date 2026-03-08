@@ -2242,3 +2242,14 @@ section {
         right: 1.5rem;
     }
 }
+
+/* Modal video safety — override global video contain rule */
+#modal-video {
+    display: block;
+    max-width: 90vw;
+    max-height: 90vh;
+    width: auto;
+    height: auto;
+    contain: none; /* override the global `contain: layout paint size` */
+    object-fit: contain;
+}
