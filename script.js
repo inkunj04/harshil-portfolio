@@ -577,7 +577,6 @@ document.addEventListener('DOMContentLoaded', () => {
             phone.addEventListener('mouseenter', playPreview);
             phone.addEventListener('mouseleave', stopPreview);
 
-            // 2. Click / Tap to Open Fullscreen Modal
             phone.addEventListener('click', (e) => {
                 // On touch devices, the first tap acts as a hover (triggering mouseenter).
                 // We ensure the overlay is active before allowing the click to open the modal.
@@ -587,18 +586,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     return; // Stop click from proceeding to modal on first tap
                 }
 
-                const source = video.querySelector('source');
-                if (source) {
-                    // Explicitly kill the background preview decoding to prevent modal stutter
+                // Read video path from data attribute (fast, no DOM traversal)
+                const videoSrc = phone.dataset.video
+                    || (() => { const s = video.querySelector('source'); return s ? s.src : null; })();
+
+                if (videoSrc) {
+                    // Kill background preview decoding to prevent modal stutter
                     stopPreview();
 
-                    modalVideo.src = source.src;
+                    // Assign src only when modal opens — avoids preloading 9 videos at once
+                    modalVideo.src = videoSrc;
                     modalVideo.load();
-                    
+
                     videoModal.classList.add('active');
                     videoModal.setAttribute('aria-hidden', 'false');
                     document.body.style.overflow = 'hidden'; // Lock background scrolling
-                    
+
                     modalVideo.muted = false; // Unmute full feature playback
                     modalVideo.play().catch(e => console.log("Modal play prevented:", e));
                 }
