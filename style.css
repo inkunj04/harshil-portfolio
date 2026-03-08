@@ -1,0 +1,2244 @@
+/* =========================================
+   Portfolio - Harshil Jadav
+   ========================================= */
+
+:root {
+    --bg-color: #f8f6f2; /* Soft off-white / light beige */
+    --text-color: #1a1a1a; /* Dark charcoal */
+    --accent-purple: #8561ff; /* Soft modern purple */
+    --accent-purple-light: rgba(133, 97, 255, 0.15);
+    --signature-color: #3d3d3d; /* Elegant dark grey for signature */
+    --nav-bg: rgba(248, 246, 242, 0.65); /* Semi-transparent background */
+    --border-color: rgba(26, 26, 26, 0.08);
+}
+
+html.smooth-scroll {
+    scroll-behavior: smooth;
+}
+
+/* Background color lives on html so body::after grid can paint above it */
+html {
+    background-color: var(--bg-color);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: transparent; /* Moved to html so grid pseudo-element renders above the base color */
+    color: var(--text-color);
+    font-family: 'Poppins', sans-serif;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    position: relative;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Moving grid to pseudo element for smooth GPU drift */
+body::after {
+    content: '';
+    position: fixed; /* Keep it fixed to the viewport */
+    top: -200px; left: -200px;
+    width: calc(100vw + 400px);
+    height: calc(100vh + 400px);
+    background-image: 
+        linear-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+    background-size: 140px 140px;
+    z-index: -3; /* Lowest layer */
+    pointer-events: none;
+    will-change: transform;
+    opacity: 0;
+    /* Comma separate entrance fade and infinite drift */
+    animation: fadeGridIn 2s ease forwards, driftGrid 60s linear infinite;
+}
+
+@keyframes fadeGridIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+}
+
+@keyframes driftGrid {
+    0% { transform: translate3d(0, 0, 0); }
+    100% { transform: translate3d(140px, 140px, 0); }
+}
+
+/* =========================================
+   PERFORMANCE — GPU, containment, mobile
+   ========================================= */
+
+/* Section containment: lets browser optimize paint areas independently */
+section {
+    contain: layout paint style;
+}
+
+/* Video: force hardware decode path, prevent layout shifts */
+video {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    will-change: transform;
+    object-fit: cover;
+    contain: layout paint size;
+}
+
+/* Reel phone cards: promote to own compositor layer */
+.phone-wrapper,
+.reel-card,
+[class*="reel-phone"],
+[class*="phone-frame"] {
+    transform: translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+}
+
+/* Mobile: kill tap flash, smooth font rendering */
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+
+
+/* Soft ambient radial gradient field panning slowly */
+body::before {
+    content: '';
+    position: fixed; /* Keep it fixed to the viewport */
+    top: -50%; left: -50%; width: 200%; height: 200%; /* Large area */
+    background: radial-gradient(circle at 50% 50%, rgba(133, 97, 255, 0.08) 0%, transparent 60%);
+    z-index: -1; 
+    pointer-events: none;
+    will-change: transform; /* hardware acceleration */
+    /* Animate transform instead of background-position for butter smooth 60fps */
+    animation: driftAmbientTransform 30s ease-in-out infinite alternate;
+}
+
+/* Ensure sections do not accidentally paint over the global background */
+section {
+    background: transparent;
+}
+
+/* Optional subtle grain texture */
+.texture-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none; /* Critical for scroll perf */
+    z-index: -2; /* ensure it stays behind everything including navbar */
+    opacity: 0.03; /* Substantially reduced opacity for a minimal premium look */
+    background-image: url('data:image/svg+xml,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)"/%3E%3C/svg%3E');
+    will-change: transform; /* Hint for static rasterization if needed */
+    transform: translateZ(0);
+}
+
+/* =========================================
+   Navbar (Glassmorphism)
+   ========================================= */
+.navbar {
+    position: sticky;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+    
+    /* Base Glass State (At Top) */
+    background: rgba(255, 255, 255, 0.15); 
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border-bottom: 1px solid transparent;
+    box-shadow: 0px 8px 30px rgba(0, 0, 0, 0);
+
+    /* Height-based Layout for Compression */
+    height: 72px;
+    padding: 0 3rem;
+    display: flex;
+    align-items: center;
+
+    /* Transition for everything but blur and height to prevent reflow */
+    transition: background 300ms cubic-bezier(0.22, 1, 0.36, 1), 
+                box-shadow 300ms cubic-bezier(0.22, 1, 0.36, 1),
+                border-color 300ms cubic-bezier(0.22, 1, 0.36, 1);
+    
+    transform: translateZ(0); /* Native hardware acceleration for sticky nav */
+}
+
+/* Subtle repeating light sweep (reflecting off glass constraint) */
+.navbar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(
+        to right,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.15) 50%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    transform-origin: left;
+    transform: translateX(-200%) skewX(-20deg);
+    animation: navbarSweep 12s ease-in-out infinite;
+    pointer-events: none;
+    z-index: -1;
+    will-change: transform, opacity;
+}
+
+/* Soft dissolving edge fade — removes the sharp navbar bottom line */
+.navbar::after {
+    content: '';
+    position: absolute;
+    top: 100%; left: 0;
+    width: 100%;
+    height: 40px;
+    background: linear-gradient(
+        to bottom,
+        rgba(248, 246, 242, 0.65), /* match --bg-color with alpha */
+        rgba(248, 246, 242, 0)
+    );
+    filter: blur(6px);
+    pointer-events: none;
+    z-index: -2;
+    opacity: 0.85;
+    transition: opacity 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Scroll Activated State */
+.navbar.scrolled {
+    background: rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 0px 8px 30px rgba(0, 0, 0, 0.05);
+    height: 60px; /* Compress height */
+}
+
+/* Strengthen fade when scrolled for deeper integration */
+.navbar.scrolled::after {
+    opacity: 1;
+}
+
+.nav-container {
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-logo {
+    text-decoration: none;
+    font-family: 'Great Vibes', cursive;
+    font-size: 2rem;
+    color: var(--text-color);
+    font-weight: 400;
+    letter-spacing: 0.05em;
+}
+
+.nav-links {
+    display: flex;
+    gap: 3rem;
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: var(--text-color);
+    font-size: 0.95rem;
+    font-weight: 400;
+    position: relative;
+    padding-bottom: 4px;
+    transition: color 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.nav-links a::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 1.5px;
+    bottom: 0;
+    left: 0;
+    background-color: var(--accent-purple);
+    transform: scaleX(0);
+    transform-origin: center;
+    transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.nav-links a:hover {
+    color: #000; /* Darken slightly */
+}
+
+.nav-links a:hover::after,
+.nav-links a.active::after {
+    transform: scaleX(1);
+}
+
+.hamburger {
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+    cursor: pointer;
+    background: none;
+    border: none;
+    z-index: 95;
+    padding: 5px;
+}
+
+.hamburger .bar {
+    width: 26px;
+    height: 1.5px;
+    background-color: var(--text-color);
+    transition: all 0.3s ease;
+}
+
+/* Mobile Menu Overlay */
+.mobile-menu {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.65); /* Glassmorphism translucent background */
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    z-index: 85;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.mobile-menu.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+.mobile-links {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2.2rem; /* Slightly refined gap for modern look */
+    position: relative; /* Anchor for the active underline */
+}
+
+/* Persistent Animated Active Underline */
+.mobile-active-underline {
+    position: absolute;
+    top: 0; 
+    left: 0; /* Pure 0,0 axis anchor for JS calculation */
+    height: 2px;
+    background-color: var(--accent-purple);
+    border-radius: 2px;
+    pointer-events: none; /* Ignore clicks */
+    transition: transform 250ms cubic-bezier(0.25, 0.8, 0.25, 1), 
+                width 250ms cubic-bezier(0.25, 0.8, 0.25, 1), 
+                opacity 0.4s ease;
+    opacity: 0; /* Hidden initially, JS/CSS reveals it */
+    transform: translate3d(0, 0, 0); 
+    will-change: transform, width, opacity;
+}
+
+.mobile-menu.active .mobile-active-underline {
+    opacity: 1;
+    transition-delay: 0.15s; /* Wait for menu links to appear first before showing line */
+}
+
+.mobile-link {
+    position: relative;
+    text-decoration: none;
+    color: var(--text-color);
+    font-size: clamp(22px, 6vw, 32px); /* Refined responsive typography */
+    font-weight: 400; /* Increased slightly to balance smaller size */
+    letter-spacing: 0.02em;
+    opacity: 0; /* Base state for staggered entrance */
+    transform: translateY(25px); /* Base state for staggered entrance */
+    transition: opacity 250ms cubic-bezier(0.22, 1, 0.36, 1), 
+                transform 250ms cubic-bezier(0.22, 1, 0.36, 1),
+                color 0.2s ease, /* Faster interactive feedback */
+                scale 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+                background-color 0.2s ease;
+    transition-delay: 0ms; /* Ensures it closes fast instantly */
+    will-change: transform, opacity;
+    padding: 0.2em 0.5em; /* Padding for the tap highlight */
+    border-radius: 8px; /* Soft edges for tap highlight */
+}
+
+/* Animated Underline Indicator */
+.mobile-link::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 1.5px;
+    bottom: 0;
+    left: 0;
+    background-color: var(--accent-purple);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Staggered entrance animations when menu is active */
+.mobile-menu.active .mobile-link {
+    opacity: 1;
+    transform: translateY(0);
+}
+.mobile-menu.active .mobile-link:nth-child(1) { transition-delay: 0ms; }
+.mobile-menu.active .mobile-link:nth-child(2) { transition-delay: 80ms; } 
+.mobile-menu.active .mobile-link:nth-child(3) { transition-delay: 160ms; } 
+.mobile-menu.active .mobile-link:nth-child(4) { transition-delay: 240ms; } 
+
+/* Tactile feedback on tap/hover */
+.mobile-link:hover, .mobile-link:active {
+    color: var(--accent-purple);
+    transform: scale(0.97); /* Highlight scale down as requested */
+    background-color: rgba(133, 97, 255, 0.05); /* Subtle highlight behind text */
+}
+
+.mobile-link:hover::after, .mobile-link:active::after {
+    transform: scaleX(1); /* Expand underline */
+}
+
+/* 4. Floating Ambient Shapes */
+.menu-ambient-shape {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(133, 97, 255, 0.15) 0%, rgba(133, 97, 255, 0) 70%);
+    pointer-events: none;
+    z-index: -1; /* Behind links */
+    filter: blur(25px);
+    will-change: transform;
+    animation: driftShapeMobile 15s ease-in-out infinite alternate;
+    opacity: 0;
+    transition: opacity 1s ease;
+}
+
+.mobile-menu.active .menu-ambient-shape {
+    opacity: 1; /* Fade in when menu opens */
+}
+
+.menu-ambient-shape.shape-1 {
+    width: 250px;
+    height: 250px;
+    top: -5%;
+    right: -10%;
+    animation-delay: 0s;
+}
+
+.menu-ambient-shape.shape-2 {
+    width: 200px;
+    height: 200px;
+    bottom: 10%;
+    left: -5%;
+    animation-delay: -5s;
+    background: radial-gradient(circle, rgba(133, 97, 255, 0.1) 0%, rgba(133, 97, 255, 0) 70%);
+}
+
+.menu-ambient-shape.shape-3 {
+    width: 150px;
+    height: 150px;
+    top: 40%;
+    left: 50%;
+    animation-delay: -2s;
+    background: radial-gradient(circle, rgba(133, 97, 255, 0.08) 0%, rgba(133, 97, 255, 0) 70%);
+}
+
+@keyframes driftShapeMobile {
+    0% { transform: translate3d(0, 0, 0) scale(1); }
+    100% { transform: translate3d(-30px, 40px, 0) scale(1.1); }
+}
+
+/* Hamburger Active State */
+.hamburger.active .bar:nth-child(1) {
+    transform: translateY(7.5px) rotate(45deg);
+}
+.hamburger.active .bar:nth-child(2) {
+    opacity: 0;
+}
+.hamburger.active .bar:nth-child(3) {
+    transform: translateY(-7.5px) rotate(-45deg);
+}
+
+/* =========================================
+   Hero Section (Page 1)
+   ========================================= */
+.hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    width: 100%;
+    min-height: 100svh; /* Stable viewport accounting for mobile UI */
+    z-index: 1; /* Lowered from 10 so body::after grid at z-index:-3 can show */
+    position: relative;
+    /* Prevent hero exit scale down from causing scrollbar thrashing */
+    overflow: hidden;
+}
+
+/* Group wrapper for cinematic scroll scale-out */
+.hero-content-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    will-change: transform, opacity;
+    opacity: 1;
+    /* 
+       Base translation includes a 12px optical offset downwards.
+       This visually perfects the center because the typography weight is top-heavy.
+     */
+    transform: translate3d(0, 12px, 0) scale(1);
+    padding: 0 1rem; /* Prevent edge touching on small mobile */
+    /* Cinematic transition for Hero Exit */
+    transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1), opacity 600ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Hero Exit State (triggered via JS when scrolling down) */
+.hero-content-group.hero-exit {
+    transform: translate3d(0, 40px, 0) scale(0.96);
+    opacity: 0.85;
+}
+
+/* =========================================
+   Hero Decorative Elements
+   ========================================= */
+
+/* Center: Hardware Accelerated Cursor Glow */
+.hero-cursor-glow {
+    position: absolute;
+    top: -50vh; left: -50vw;
+    width: 200vw; height: 200vh;
+    /* pure transform translation from center reduces expensive layout repaints */
+    background: radial-gradient(circle at center, rgba(155, 130, 255, 0.12), transparent 30%);
+    pointer-events: none;
+    z-index: 1; /* Below content */
+    will-change: transform;
+    opacity: 0; /* Fade in when mouse tracks */
+    transition: opacity 500ms ease;
+    transform: translateZ(0); /* Force GPU Layer */
+}
+
+.hero-cursor-glow.active {
+    opacity: 1;
+}
+
+/* Left: Floating Glass Orbs */
+.hero-orbs {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 2;
+    overflow: hidden; /* Prevent leaking horizontally */
+}
+
+.orb {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(155, 130, 255, 0.35), rgba(155, 130, 255, 0.05));
+    opacity: 0.25;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    will-change: transform;
+    transform: translateZ(0); /* Force GPU Layer */
+}
+
+.orb-1 { width: 180px; height: 180px; top: 15%; left: 6%; animation: floatOrb 14s cubic-bezier(0.25, 0.8, 0.25, 1) infinite alternate; }
+.orb-2 { width: 120px; height: 120px; top: 55%; left: 16%; animation: floatOrb 12s cubic-bezier(0.25, 0.8, 0.25, 1) infinite alternate-reverse; }
+.orb-3 { width: 80px; height: 80px; top: 75%; left: 5%; animation: floatOrb 10s cubic-bezier(0.25, 0.8, 0.25, 1) infinite alternate; }
+
+@keyframes floatOrb {
+    0% { transform: translate3d(0, -10px, 0) scale(1); }
+    100% { transform: translate3d(0, 10px, 0) scale(1.05); }
+}
+
+/* Right: Vertical Role Indicator */
+.hero-role-indicator {
+    position: absolute;
+    right: 2rem;
+    top: 50%;
+    font-weight: 300;
+    letter-spacing: 0.3em;
+    color: var(--text-color);
+    line-height: 1.4;
+    text-align: center;
+    pointer-events: none;
+    z-index: 5;
+    /* CSS parses sequentially: Y-center, X-offset, Rotate */
+    opacity: 0; /* starts hidden */
+    animation: roleEntrance 1s cubic-bezier(0.22, 1, 0.36, 1) forwards 0.8s;
+    will-change: transform, opacity;
+}
+
+@keyframes roleEntrance {
+    0% {
+        opacity: 0;
+        transform: translateY(-50%) translateX(40px) rotate(90deg) translateZ(0);
+    }
+    100% {
+        opacity: 0.12;
+        transform: translateY(-50%) translateX(0) rotate(90deg) translateZ(0);
+    }
+}
+
+/* Main Typography: "portfolio" */
+.title {
+    font-size: clamp(4rem, 16vw, 15rem);
+    font-weight: 300;
+    letter-spacing: -0.05em;
+    line-height: 1;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-transform: lowercase;
+    position: relative;
+    
+    /* Premium Hover Setup: Background Sweep */
+    background: linear-gradient(
+        120deg, 
+        var(--text-color) 0%, 
+        var(--text-color) 40%, 
+        #8561ff 50%, 
+        var(--text-color) 60%, 
+        var(--text-color) 100%
+    );
+    background-size: 300% 100%;
+    background-position: 0% 50%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    
+    /* Hero Entrance Animation */
+    opacity: 0;
+    animation: titleEntrance 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    
+    /* Interactive Hover Transitions */
+    transition: transform 700ms cubic-bezier(0.22, 1, 0.36, 1),
+                letter-spacing 700ms cubic-bezier(0.22, 1, 0.36, 1),
+                background-position 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Guard hover states strictly to fine pointers (Desktop) */
+@media (hover: hover) and (pointer: fine) {
+    .title:hover {
+        transform: scale(1.03);
+        letter-spacing: -0.01em; /* Soft typographic expansion */
+        background-position: 100% 50%; /* Sweep gradient */
+    }
+}
+
+@keyframes titleEntrance {
+    0% { opacity: 0; transform: scale(0.95); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+/* The Custom "o" logic */
+.creative-o {
+    display: inline-flex;
+    position: relative;
+    width: 0.6em;
+    height: 1em;
+    justify-content: center;
+    align-items: center;
+    margin: 0 0.05em;
+}
+
+/* Abstract starburst / blurred shape behind */
+.burst-shape {
+    position: absolute;
+    width: 2.8em;
+    height: 2.8em;
+    background: radial-gradient(circle, rgba(133, 97, 255, 0.45) 0%, rgba(133, 97, 255, 0) 65%);
+    z-index: -1;
+    animation: floatShape 6s ease-in-out infinite;
+    transform-origin: center;
+}
+
+/* Sharp SVG ellipse outline */
+.ellipse-outline {
+    position: absolute;
+    width: 0.9em;
+    height: 0.9em;
+    color: var(--text-color);
+    z-index: 1;
+}
+
+/* Content Creator Badge */
+.badge {
+    background-color: var(--accent-purple);
+    color: #ffffff;
+    font-size: clamp(0.9rem, 2.5vw, 1.6rem);
+    font-weight: 400;
+    padding: 0.4em 1.4em;
+    border-radius: 50px;
+    letter-spacing: 0.02em;
+    box-shadow: 0 8px 25px rgba(133, 97, 255, 0.3);
+    /* Moves badge down slightly from portfolio */
+    margin-top: -1.0rem;
+    z-index: 5;
+    position: relative;
+    transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.4s ease;
+    /* Hero Entrance Setup */
+    opacity: 0;
+    animation: badgeEntrance 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards 0.3s;
+}
+
+@keyframes badgeEntrance {
+    0% { opacity: 0; transform: translateY(20px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Minimal interaction */
+.badge:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 12px 30px rgba(133, 97, 255, 0.4);
+}
+
+/* Signature Name */
+.signature {
+    font-family: 'Great Vibes', cursive;
+    font-size: clamp(2.5rem, 6vw, 4.8rem);
+    color: var(--signature-color);
+    margin-top: 2rem;
+    font-weight: 400;
+    transform: rotate(-3deg);
+    /* Hero Entrance Setup */
+    opacity: 0;
+    animation: signatureEntrance 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards 0.6s;
+}
+
+@keyframes signatureEntrance {
+    0% { opacity: 0; transform: rotate(-3deg) scale(0.95); }
+    100% { opacity: 0.95; transform: rotate(-3deg) scale(1); }
+}
+
+/* Extra Premium Touch: Subtle Overlay Bridge */
+.camera-bridge {
+    position: absolute;
+    top: 100vh; /* Start precisely below hero */
+    left: 0;
+    width: 100vw; 
+    height: 15vh; /* Just enough to span the gap */
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    opacity: 0;
+    transform: translateY(80px); /* Start slightly below */
+    pointer-events: none;
+    z-index: 50; /* Bridge layer between sections */
+    transition: opacity 500ms cubic-bezier(0.22, 1, 0.36, 1), transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform, opacity;
+}
+
+.camera-bridge.bridge-active {
+    opacity: 1;
+    transform: translateY(0); /* Slide upward cleanly */
+}
+
+/* Cinematic fade out as scroll continues past */
+.camera-bridge.bridge-fade-out {
+    opacity: 0;
+    transform: translateY(-40px);
+}
+
+/* =========================================
+   About Section (Page 2)
+   ========================================= */
+.about {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6rem 2rem;
+    position: relative;
+    z-index: 1; /* Lowered from 10 so body::after grid at z-index:-3 can show */
+    overflow: hidden; /* Prevent background number from causing scroll */
+}
+
+/* Depth base class for cinematic reveal */
+.depth-reveal {
+    opacity: 0.85;
+    transform: translate3d(0, 40px, 0);
+    transition: opacity 600ms cubic-bezier(0.22, 1, 0.36, 1), transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform, opacity;
+}
+
+.depth-reveal.visible-depth {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+}
+
+/* Large Faint Section Number */
+.section-bg-number {
+    position: absolute; /* Static absolute keeps it out of flow */
+    top: 5rem;
+    left: 2rem;
+    font-size: clamp(8rem, 25vw, 24rem);
+    font-weight: 600;
+    color: var(--text-color);
+    line-height: 0.8;
+    opacity: 0.04; /* Very low opacity */
+    z-index: 0;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* Cinematic Light Sweep */
+.light-sweep {
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+        to right,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.02) 50%,
+        rgba(255, 255, 255, 0) 100%
+    );
+    transform: rotate(35deg);
+    pointer-events: none;
+    z-index: 2; /* Still below main text content generally */
+    animation: sweepLight 25s linear infinite;
+}
+
+/* Interactive Cursor Halo */
+.cursor-halo {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, rgba(133, 97, 255, 0.08) 0%, transparent 60%);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 1; 
+    opacity: 0; /* JS controls visibility */
+    transition: opacity 0.5s ease;
+}
+
+.about-container {
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 8rem;
+}
+
+/* Left Side: Photo */
+.about-image-wrapper {
+    flex: 1;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Soft Radial Aura Behind Image Container */
+.about-image-wrapper::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 45%;
+    transform: translate(-50%, -50%);
+    width: 140%;
+    height: 140%;
+    background: radial-gradient(circle, var(--accent-purple) 0%, transparent 60%);
+    opacity: 0.15; /* 0.12 - 0.18 max as requested */
+    filter: blur(40px);
+    z-index: -2;
+    pointer-events: none;
+}
+
+/* Subtle glowing gradient behind image */
+.image-glow {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(133, 97, 255, 0.25) 0%, rgba(133, 97, 255, 0) 70%);
+    z-index: -1;
+    transform: scale(1.3);
+    border-radius: 50%;
+    animation: pulseGlow 8s ease-in-out infinite alternate;
+}
+
+/* Masked shape with smooth rounded corners */
+.image-mask {
+    width: 100%;
+    max-width: 480px;
+    aspect-ratio: 1 / 1.05;
+    border-radius: 50px 140px 50px 140px; /* Creative aesthetic shape */
+    background: #f8f8f8; /* Fills empty space if image is contained */
+    overflow: hidden;
+    position: relative;
+    animation: floatImage 7s ease-in-out infinite;
+    transform: translateZ(0); /* Hardware acceleration */
+}
+
+/* Layered Image Depth Frames */
+.image-layer {
+    position: absolute;
+    width: 100%;
+    max-width: 480px;
+    aspect-ratio: 1 / 1.05;
+    border-radius: 50px 140px 50px 140px; /* Match image mask */
+    pointer-events: none;
+    z-index: -1;
+}
+
+.layer-1 {
+    border: 1px solid rgba(0, 0, 0, 0.08); /* Light neutral border */
+    background: transparent;
+    transform: translate(-12px, 12px);
+}
+
+.layer-2 {
+    background: rgba(133, 97, 255, 0.03); /* Faint purple tint */
+    transform: translate(22px, -22px);
+}
+
+/* Subtle inner border using inset shadow */
+.image-mask::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+    border-radius: inherit;
+    pointer-events: none;
+}
+
+.about-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* Full portrait visible without cropping */
+    object-position: center;
+    transition: transform 0.8s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.image-mask:hover .about-img {
+    transform: scale(1.04); /* Subtle interactive zoom restored */
+}
+
+/* Desktop Only Vertical Divider */
+.about-divider {
+    width: 1px;
+    height: 60%;
+    background-color: var(--border-color); /* Very low opacity grey */
+    margin: 0 1rem;
+    opacity: 0.6;
+}
+
+/* Right Side: Content */
+.about-content {
+    flex: 1.1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.section-label {
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    color: var(--accent-purple);
+    margin-bottom: 1.2rem;
+    display: inline-block;
+    padding: 0.4em 1.2em;
+    background-color: var(--accent-purple-light);
+    border-radius: 50px;
+}
+
+.section-heading {
+    font-size: clamp(2.5rem, 5vw, 3.8rem);
+    font-weight: 300;
+    color: var(--text-color);
+    line-height: 1.1;
+    margin-bottom: 1.5rem;
+    letter-spacing: -0.03em;
+}
+
+.about-subheading {
+    font-size: clamp(1.2rem, 2.5vw, 1.6rem);
+    font-weight: 300;
+    color: var(--text-color);
+    line-height: 1.5;
+    margin-bottom: 1.5rem;
+    font-style: italic;
+    opacity: 0.9;
+}
+
+.about-text {
+    font-size: clamp(1rem, 1.5vw, 1.1rem);
+    font-weight: 300;
+    color: #555;
+    line-height: 1.7;
+    margin-bottom: 3rem;
+    max-width: 95%;
+}
+
+/* =========================================
+   Premium Glass Skill Pills (iOS Style)
+   ========================================= */
+.skills-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.skills-row {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: nowrap; /* Prevent breaking the strict 3x2 */
+}
+
+.skills-row.centered {
+    justify-content: center;
+}
+
+.skill-pill {
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03); /* Soft, exceptionally light shadow */
+    border-radius: 50px;
+    padding: 0.6rem 1.4rem;
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: var(--text-color);
+    position: relative;
+    overflow: hidden;
+    cursor: default;
+    text-align: center;
+    white-space: nowrap;
+    /* Only animate GPU-friendly properties to avoid paint recalculations */
+    transition: transform 250ms cubic-bezier(0.22, 1, 0.36, 1), 
+                border-color 250ms cubic-bezier(0.22, 1, 0.36, 1);
+    transform: translateZ(0); 
+    will-change: transform; /* Promote to own compositor layer */
+}
+
+/* Subtle inner iOS highlight layer */
+.skill-pill::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 30%);
+    border-radius: inherit;
+    pointer-events: none;
+}
+
+/* Desktop hover lift logic */
+@media (hover: hover) and (pointer: fine) {
+    .skill-pill:hover {
+        will-change: transform, border-color, box-shadow; /* Limit will-change strictly */
+        transform: translateY(-4px);
+        border-color: rgba(133, 97, 255, 0.4); /* Soft purple border */
+        box-shadow: 0 8px 16px rgba(133, 97, 255, 0.05); /* very soft shadow */
+    }
+}
+
+/* =========================================
+   Cinematic Advanced Reveal Sequence (Optimized)
+   ========================================= */
+
+/* Use will-change to prep browser natively */
+.anim-image, .anim-name, .anim-quote, .anim-text, .skill-pill {
+    will-change: transform, opacity;
+}
+
+/* Base Hidden States (Forced Hardware Acceleration) */
+.anim-image {
+    opacity: 0;
+    transform: scale(1.04);
+    transition: opacity 500ms cubic-bezier(0.22, 1, 0.36, 1), transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.anim-name {
+    opacity: 0;
+    transform: translate3d(0, 20px, 0);
+    transition: opacity 500ms cubic-bezier(0.22, 1, 0.36, 1), transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.anim-quote {
+    opacity: 0.6;
+    transform: translate3d(0, 15px, 0);
+    transition: opacity 500ms ease-out, transform 500ms ease-out;
+}
+
+.anim-text {
+    opacity: 0;
+    transform: translate3d(0, 20px, 0);
+    transition: opacity 500ms cubic-bezier(0.22, 1, 0.36, 1), transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.skill-pill {
+    opacity: 0;
+    transform: translate3d(0, 20px, 0);
+    transition: opacity 500ms cubic-bezier(0.22, 1, 0.36, 1), transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Visible States applied by JS IntersectionObserver */
+.about-container.visible .anim-image,
+.reels-container.visible .anim-image {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.about-container.visible .anim-name,
+.reels-container.visible .anim-name {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    transition-delay: 0ms;
+}
+
+.about-container.visible .anim-quote,
+.reels-container.visible .anim-quote {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    transition-delay: 120ms;
+}
+
+.about-container.visible .anim-text,
+.reels-container.visible .anim-text {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    transition-delay: 200ms;
+}
+
+.about-container.visible .skill-pill,
+.reels-container.visible .reel-phone {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    /* JS applies explicit inline staggered delays based on 300ms start */
+}
+
+/* Prefers Reduced Motion Safety Guard */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+    .anim-quote {
+        transform: none !important;
+        opacity: 0; /* Fallback to simple fade for safety */
+    }
+    .depth-reveal {
+        opacity: 1 !important;
+        transform: none !important;
+    }
+    .hero-content-group {
+        transform: none !important;
+        opacity: 1 !important;
+    }
+}
+
+@keyframes fadeInReveal {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes floatShape {
+    0%, 100% {
+        transform: translateY(0) scale(1) rotate(0deg);
+    }
+    50% {
+        transform: translateY(-8px) scale(1.05) rotate(5deg);
+    }
+}
+
+@keyframes sweepLight {
+    0% { transform: translateX(-50%) rotate(35deg); }
+    100% { transform: translateX(50%) rotate(35deg); }
+}
+
+@keyframes floatImage {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-12px);
+    }
+}
+
+@keyframes pulseGlow {
+    0% {
+        opacity: 0.4;
+        transform: scale(1.1) translateZ(0);
+    }
+    100% {
+        opacity: 0.7;
+        transform: scale(1.25) translateZ(0);
+    }
+}
+
+/* Use transform instead of background-position for GPU drift panning */
+@keyframes driftAmbientTransform {
+    0% {
+        transform: translate3d(0, 0, 0);
+    }
+    100% {
+        transform: translate3d(-5%, 5%, 0);
+    }
+}
+
+/* Navbar subtle light reflection using proper transforms instead of top/left/translation hybrids */
+@keyframes navbarSweep {
+    0%, 75% {
+        transform: translateX(-200%) skewX(-20deg);
+        opacity: 0;
+    }
+    87.5% {
+        opacity: 1; /* Peak intensity */
+    }
+    100% {
+        transform: translateX(300%) skewX(-20deg);
+        opacity: 0;
+    }
+}
+
+/* =========================================
+   Responsive Adjustments
+   ========================================= */
+@media (max-width: 1024px) {
+    .navbar {
+        padding: 1.2rem 2rem;
+    }
+    .badge {
+        margin-top: -0.6rem;
+    }
+    .nav-links {
+        display: none;
+    }
+    .hamburger {
+        display: flex;
+    }
+    .about-divider {
+        display: none; /* Hide vertical divider on tablet/mobile */
+    }
+    .about-container {
+        gap: 4rem;
+    }
+    .image-mask, .image-layer {
+        border-radius: 40px 100px 40px 100px;
+        max-width: 400px;
+    }
+}
+
+@media (max-width: 768px) {
+    .navbar {
+        height: 72px; /* Reset base height */
+        padding: 0 1.2rem;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+    .navbar.scrolled {
+        height: 72px; /* Disable compression on mobile */
+        box-shadow: none; /* Disable shadow animation for perf */
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+    .navbar::before {
+        display: none; /* Disable sweep for mobile perf */
+        animation: none;
+    }
+    .navbar::after {
+        display: none; /* Disable glow on mobile */
+    }
+    .hero-content-group {
+        transform: translate3d(0, 6px, 0) scale(1) !important; /* Reduced optical translation for mobile */
+        will-change: transform, opacity, filter; /* Prep for parallax */
+        transition: none; /* Let JS drive the animation linearly */
+    }
+    .hero-content-group.hero-exit {
+        transform: translate3d(0, 16px, 0) scale(0.96); /* Reduced parallax depth for mobile fallback */
+    }
+    .camera-bridge {
+        display: none !important; /* Disable bridge effect on mobile */
+    }
+    .hero-cursor-glow,
+    .hero-role-indicator,
+    .orb-2,
+    .orb-3 {
+        display: none !important; /* Performance and layout constraint overrides */
+    }
+    .orb-1 {
+        width: 100px;
+        height: 100px;
+        top: 20%;
+        left: -10px; /* Bleed off screen softly */
+    }
+    .badge {
+        margin-top: -0.4rem;
+    }
+    .about {
+        padding: 6rem 1.2rem 4rem; /* Slightly reduced horizontal padding for breathing room */
+        overflow-x: hidden; /* Hard constraint to prevent horizontal scroll */
+        width: 100%;
+        box-sizing: border-box;
+        scroll-margin-top: 80px; /* ISSUE 1: Prevent navbar from hiding section title */
+    }
+    .about-container {
+        flex-direction: column;
+        gap: 3rem; /* Tighter gap for better vertical flow */
+        width: 100%;
+        max-width: 100%;
+    }
+    .about-image-wrapper {
+        width: 100%;
+        max-width: 320px; /* Constrain image slightly more on mobile for better center balance */
+        margin: 0 auto; /* Ensure true center */
+    }
+    .image-mask, .image-layer {
+        border-radius: 30px 80px 30px 80px;
+        aspect-ratio: 1 / 1;
+        width: 100%;
+        height: auto;
+        max-width: 100%;
+        object-fit: cover;
+    }
+    .about-content {
+        align-items: center;
+        text-align: center;
+        flex: 1;
+        width: 100%;
+        max-width: 100%;
+        overflow-wrap: break-word; /* Ensure huge long words break */
+        word-wrap: break-word;
+    }
+    .about-text {
+        width: 100%;
+        max-width: 100%;
+        line-height: 1.8; /* Slightly taller leading for easier reading */
+        padding: 0 0.5rem; /* Prevent touching literal absolute edges */
+        box-sizing: border-box;
+        margin-bottom: 2rem; /* Ensure clean spacing before the skills */
+    }
+    .skills-container {
+        display: flex !important;
+        flex-direction: row !important; /* Force true row if nested incorrectly */
+        flex-wrap: wrap !important; /* Allow container itself to wrap */
+        justify-content: center !important;
+        align-items: center !important;
+        gap: 12px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        overflow-x: hidden !important;
+    }
+    .skills-row {
+        display: contents; /* Strip row wrapper so pills flow entirely into the parent flex container naturally */
+    }
+    .skill-pill {
+        white-space: normal !important;
+        word-break: break-word !important; /* Force text wrapping if needed */
+        text-align: center !important;
+        flex: 1 1 calc(50% - 12px) !important; /* Grow and shrink evenly to 50% minus the gap */
+        width: 100% !important; /* Take full available flex basis */
+        max-width: calc(50% - 12px) !important; /* Restrict strictly to 2 columns */
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        min-height: 44px; /* Ensure uniform tap target height regardless of single/double line wrapping */
+    }
+    .skill-tag:hover {
+        /* Disable hover transform on mobile */
+        transform: translateY(0);
+        box-shadow: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .navbar {
+        padding: 1rem 1.2rem;
+    }
+    .badge {
+        margin-top: -0.1rem;
+    }
+    .nav-logo {
+        font-size: 1.6rem;
+    }
+    .section-bg-number {
+        top: 3rem;
+        left: 1rem;
+    }
+    .section-bg-word {
+        bottom: 5%;
+        right: -8%;
+    }
+    .about-image-wrapper::before {
+        width: 120%; /* Scale down radial glow proportionally */
+        height: 120%;
+    }
+    .image-mask, .image-layer {
+        max-width: 300px;
+        border-radius: 20px 60px 20px 60px;
+    }
+    .about-container {
+        gap: 3rem;
+    }
+}
+
+/* =========================================
+   Floating Skill Tags (Collision-Safe, Mobile & Desktop)
+   ========================================= */
+
+.floating-skill-tag {
+    position: absolute;
+    color: var(--text-color);
+    font-weight: 400;
+    border-radius: 50px;
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(26, 26, 26, 0.08);
+    pointer-events: none;
+    z-index: 2;
+    will-change: transform;
+    animation-name: floatSkillSafe;
+    animation-iteration-count: infinite;
+    animation-direction: alternate;
+    animation-timing-function: cubic-bezier(0.25, 0.8, 0.25, 1);
+    transform: translateZ(0); /* Hardware acceleration */
+}
+
+/* Desktop sizing (default) */
+.floating-skill-tag {
+    font-size: 0.85rem;
+    padding: 0.6em 1.4em;
+    opacity: 0.55;
+}
+
+/* Mobile sizing */
+@media (max-width: 767px) {
+    .floating-skill-tag {
+        font-size: 0.75rem;
+        padding: 0.5em 1.2em;
+        opacity: 0.45;
+    }
+}
+
+/* Oscillation animation instead of single direction */
+@keyframes floatSkillSafe {
+    0% { transform: translate3d(0, 0, 0) scale(1); }
+    50% { transform: translate3d(8px, -10px, 0) scale(1.02); }
+    100% { transform: translate3d(-5px, -18px, 0) scale(0.98); }
+}
+
+/* =========================================
+   Mobile Hero Enhancements (<768px)
+   ========================================= */
+
+/* Desktop Safety Guard for Mobile-Only Elements */
+@media (min-width: 768px) {
+    .mobile-scroll-indicator,
+    .mobile-orbit-shape,
+    .mobile-micro-particle {
+        display: none !important;
+    }
+}
+
+@media (max-width: 767px) {
+    /* 6. Spacing Optimization */
+    .hero-content-group {
+        transform: translate3d(0, 0, 0) scale(1) !important;
+        gap: 1.2rem;
+    }
+    .signature {
+        margin-top: 0.5rem !important;
+    }
+    .badge {
+        margin-top: -0.2rem !important;
+        font-size: clamp(14px, 3.5vw, 18px);
+        padding: 0.6em 1.8em;
+    }
+
+    /* 4. Subtle Background Motion */
+    body::after {
+        animation: fadeGridIn 2s ease forwards, driftGridMobile 40s linear infinite !important;
+    }
+
+    /* 2. Scroll Indicator */
+    .mobile-scroll-indicator {
+        position: absolute;
+        bottom: 7vh; /* Comfortably pushed up for breathing room */
+        left: 50%;
+        transform: translateX(-50%);
+        width: 2px; /* 100% wider for visibility */
+        height: 70px; /* 40% taller */
+        background: linear-gradient(to bottom, rgba(26, 26, 26, 0.8), transparent);
+        opacity: 0.85; /* Increased contrast base state */
+        pointer-events: none;
+        z-index: 5;
+        will-change: transform, opacity;
+        animation: pulseScrollMobile 2.5s ease-in-out infinite;
+    }
+
+    /* 3. Orbit Shapes Behind Title */
+    .mobile-orbit-shape {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: -1;
+        will-change: transform;
+    }
+    .orbit-1 {
+        width: 280px;
+        height: 280px;
+        border: 1px dashed rgba(133, 97, 255, 0.25);
+        animation: rotateOrbitMobile 35s linear infinite;
+        opacity: 0.6;
+    }
+    .orbit-2 {
+        width: 360px;
+        height: 360px;
+        border: 1px solid rgba(133, 97, 255, 0.12);
+        animation: rotateOrbitMobile 25s linear infinite reverse;
+        opacity: 0.6;
+    }
+
+    /* 5. Micro Particles */
+    .mobile-micro-particle {
+        position: absolute;
+        border-radius: 50%;
+        background: var(--text-color);
+        pointer-events: none;
+        z-index: 2;
+        will-change: transform;
+        animation-name: floatParticleMobile;
+        animation-iteration-count: infinite;
+        animation-direction: alternate;
+        animation-timing-function: ease-in-out;
+    }
+}
+
+@keyframes driftGridMobile {
+    0% { transform: translate3d(0, 0, 0); }
+    100% { transform: translate3d(-140px, 140px, 0); }
+}
+
+@keyframes rotateOrbitMobile {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes pulseScrollMobile {
+    0% { transform: translate3d(-50%, 0, 0) scaleY(1); opacity: 0.6; }
+    50% { transform: translate3d(-50%, 15px, 0) scaleY(0.7); opacity: 0.15; }
+    100% { transform: translate3d(-50%, 0, 0) scaleY(1); opacity: 0.6; }
+}
+
+@keyframes floatParticleMobile {
+    0% { transform: translate3d(0, 0, 0); }
+    100% { transform: translate3d(0, -40px, 0); }
+}
+
+/* =========================================
+   Heritage Reels Section (Page 3) 
+   ========================================= */
+.reels-section {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 2rem 80px; /* Slimmed down from 8rem */
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+    scroll-margin-top: 100px; /* Offsets the fixed navbar on scroll to preserve heading view */
+}
+
+.reels-container {
+    max-width: 1400px;
+    width: 100%;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* let margin-bottom on header dictate the gap */
+}
+
+/* Header Text */
+.reels-header {
+    text-align: center;
+    margin-bottom: 40px; 
+}
+
+.reels-header .section-label {
+    text-transform: lowercase;
+    font-size: 1.2rem;
+    font-weight: 300;
+    letter-spacing: 0.1em;
+    color: var(--accent-purple);
+    margin-bottom: 0.5rem;
+    opacity: 0.9;
+}
+
+.reels-header .section-heading {
+    font-size: clamp(2.5rem, 6vw, 4rem);
+}
+
+/* 3-Column Grid Layout */
+.reels-grid {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3rem;
+    width: 100%;
+}
+
+/* Base Phone Hardware Frame */
+.reel-phone {
+    position: relative;
+    width: 260px;
+    aspect-ratio: 9 / 16;
+    border-radius: 40px;
+    overflow: hidden;
+    background: black;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.2);
+    cursor: pointer; /* Highlight interactivity */
+    /* Cinematic Initial State (JS staggered) */
+    opacity: 0;
+    transform: translate3d(0, 40px, 0);
+    transition: opacity 600ms cubic-bezier(0.22, 1, 0.36, 1), transform 600ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform, opacity;
+}
+
+/* Seamless Video Styling */
+.reel-phone video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    position: relative;
+    z-index: 2; /* Needs to sit above the glow mathematically */
+}
+
+/* Hover Overlay Display */
+.reel-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    opacity: 0;
+    z-index: 10;
+    transition: opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none; /* Let parent handle hover clicks */
+}
+
+/* State logic instead of strict element hover for mobile flexibility */
+.reel-phone.hover-active .reel-overlay,
+.reel-phone:hover .reel-overlay {
+    opacity: 1;
+}
+
+.reel-overlay .play-icon {
+    font-size: 2rem;
+    color: white;
+    margin-bottom: 0.5rem;
+    filter: drop-shadow(0 2px 10px rgba(0,0,0,0.5));
+}
+
+.reel-overlay .overlay-text {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: white;
+    text-align: center;
+    letter-spacing: 0.5px;
+    padding: 0 1.5rem;
+    filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));
+}
+
+/* Category Pill Tag */
+.reel-category-tag {
+    position: absolute;
+    top: 1.2rem;
+    right: 1.2rem;
+    z-index: 15;
+    padding: 0.4rem 0.8rem;
+    border-radius: 50px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: white;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    pointer-events: none;
+    text-transform: uppercase;
+}
+
+/* Animated Preview Progress Bar */
+.preview-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    width: 0%;
+    background: rgba(255, 255, 255, 0.85); /* Subtle white track */
+    box-shadow: 0 0 10px rgba(255,255,255,0.5);
+    z-index: 15;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    opacity: 0;
+}
+
+.reel-phone.hover-active .preview-progress,
+.reel-phone:hover .preview-progress {
+    opacity: 1;
+}
+
+/* Section Divider */
+.section-divider {
+    width: 2px;
+    height: 100px;
+    margin: 0 auto;
+    background: linear-gradient(to bottom, transparent, rgba(133, 97, 255, 0.35), transparent);
+    opacity: 0.6;
+}
+
+/* Center Highlighted Phone */
+.reel-phone.featured {
+    width: 290px;
+    z-index: 5;
+    box-shadow: 0 35px 80px rgba(0,0,0,0.25);
+}
+
+.reels-container.visible .reel-phone.featured {
+    transform: translate3d(0, -10px, 0); /* Maintains its slightly elevated featured state after reveal */
+}
+
+/* Soft Hover Glow Logic */
+.phone-glow {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 120%;
+    height: 120%;
+    background: radial-gradient(circle at center, rgba(133, 97, 255, 0.5) 0%, transparent 70%);
+    z-index: 1; /* Glow behind video, wait overflow hidden cuts it. Let it stay inside the overflow for an inner pulse, or... Wait, overflow hidden ruins the big box-shadow glow. Actually, I will use ring/shadow based glow on hover to prevent overflow crop */
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.6s ease;
+}
+
+/* Hover effects (Bound specifically to visible state so it beats the specificity of the reveal trigger) */
+.reels-container.visible .reel-phone {
+    transition: transform 0.1s linear, box-shadow 0.35s ease;
+}
+
+.reels-container.visible .reel-phone:hover {
+    transform: perspective(1000px) translateY(-8px) scale(1.02);
+    box-shadow: 0 20px 60px rgba(133, 97, 255, 0.25);
+    z-index: 10;
+}
+
+.reels-container.visible .reel-phone.featured {
+    transition: transform 0.1s linear, box-shadow 0.35s ease;
+}
+
+.reels-container.visible .reel-phone.featured:hover {
+    transform: perspective(1000px) translate3d(0, -18px, 0) scale(1.02); /* Relative to its baseline -10px elevation */
+    box-shadow: 0 20px 60px rgba(133, 97, 255, 0.25);
+    z-index: 10;
+}
+
+/* Responsive Grid Fallbacks */
+@media (max-width: 1080px) {
+    .reels-grid { gap: 2rem; }
+    .reel-phone { width: 240px; }
+    .reel-phone.featured { width: 260px; }
+}
+
+@media (max-width: 850px) {
+    .reels-grid {
+        flex-wrap: wrap; /* Triggers 2 on top, 1 below */
+        max-width: 600px;
+    }
+    .reel-phone.featured {
+        order: 3; /* Move featured to bottom center visually */
+        width: 280px;
+        transform: translateY(0);
+    }
+    .reels-container.visible .reel-phone.featured:hover {
+        transform: translateY(-10px);
+    }
+}
+
+@media (max-width: 600px) {
+    .reels-section { padding: 6rem 1rem; }
+    .reels-grid {
+        flex-direction: column;
+        gap: 3rem;
+    }
+    .reel-phone, .reel-phone.featured {
+        width: 80%;
+        max-width: 320px;
+        order: initial;
+    }
+}
+
+/* =========================================
+   Creative Moments Section (Page 5) 
+   ========================================= */
+.split-reels-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr 1fr;
+    gap: 60px;
+    align-items: center;
+    width: 100%;
+}
+
+.split-reels-grid .reel-phone {
+    width: 100%;
+    max-width: 280px;
+    aspect-ratio: 9 / 16;
+    margin: auto;
+}
+
+.center-story-text {
+    text-align: center;
+    max-width: 520px;
+    margin: auto;
+    padding: 0 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.center-story-text h3 {
+    font-size: clamp(1.8rem, 4vw, 2.5rem);
+    color: var(--text-color);
+    margin-bottom: 1.5rem;
+    font-weight: 300;
+    letter-spacing: 0.05em;
+}
+
+.center-story-text p {
+    font-size: 1rem;
+    color: var(--text-color);
+    opacity: 0.8;
+    line-height: 1.6;
+    margin-bottom: 2rem;
+    max-width: 90%;
+}
+
+.story-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    justify-content: center;
+}
+
+.story-tag {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 50px;
+    font-size: 0.8rem;
+    color: var(--text-color);
+    opacity: 0.8;
+    background: var(--nav-bg);
+    backdrop-filter: blur(5px);
+}
+
+@media (max-width: 992px) {
+    .split-reels-grid {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        gap: 3rem;
+    }
+    
+    .center-story-text {
+        order: 2; /* Force text between the two videos */
+    }
+    
+    .split-reels-grid .reel-phone:nth-child(1) { order: 1; }
+    .split-reels-grid .reel-phone:last-child { order: 3; }
+    
+    .split-reels-grid .reel-phone {
+        width: 80%;
+        max-width: 320px;
+    }
+}
+
+/* =========================================
+   Section 06 — Contact (Standalone)
+   ========================================= */
+@keyframes c06FadeUp {
+    from { opacity: 0; transform: translateY(36px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.contact06-section {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    position: relative;
+    z-index: 1;
+    scroll-margin-top: 80px;
+}
+
+/* ── Glass Panel ─────────────────────────────────── */
+.contact-glass {
+    width: min(720px, 90%);
+    margin: 0 auto;
+    padding: 56px;
+    border-radius: 28px;
+    color: #1a1a1a;
+
+    /* Light frosted glass — 35% white lets grid bleed through */
+    background: rgba(255, 255, 255, 0.35);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    box-shadow:
+        0 30px 80px rgba(0, 0, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+
+    /* CSS entrance — no JS required */
+    animation: c06FadeUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: 0.15s;
+
+    transition: transform 0.35s ease, box-shadow 0.35s ease;
+    transform: translateZ(0);
+    will-change: transform;
+}
+
+.contact-glass:hover {
+    transform: translateY(-6px) translateZ(0);
+    box-shadow:
+        0 40px 100px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+/* ── Inner Typography ────────────────────────────── */
+.c06-label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 400;
+    letter-spacing: 0.12em;
+    text-transform: lowercase;
+    color: #8561ff;
+    margin-bottom: 1.2rem;
+}
+
+.c06-heading {
+    font-size: clamp(1.75rem, 4.5vw, 2.8rem);
+    font-weight: 300;
+    line-height: 1.25;
+    color: #1a1a1a;
+    margin-bottom: 2rem;
+}
+
+.c06-message {
+    font-size: 1rem;
+    line-height: 1.8;
+    color: #333333;
+    margin-bottom: 2rem;
+}
+
+.c06-quote {
+    margin: 0 0 2.5rem 0;
+    padding-left: 14px;
+    border-left: 3px solid #a78bfa;
+    font-size: 1rem;
+    font-style: italic;
+    color: #555555;
+    line-height: 1.65;
+}
+
+/* ── Contact Buttons (high contrast, always visible) */
+.c06-btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 8px;
+}
+
+.c06-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    border-radius: 999px;
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    color: #111111;
+    text-decoration: none;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    transform: translateZ(0);
+    will-change: transform;
+}
+
+.c06-btn:hover {
+    transform: translateY(-3px) translateZ(0);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.c06-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    color: inherit;
+}
+
+/* Resume Download Button — same pill shape, dark fill */
+.resume-btn {
+    padding: 12px 20px;
+    border-radius: 999px;
+    background: #111111;
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 0.95rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    transform: translateZ(0);
+    will-change: transform;
+    /* Override c06-btn white bg */
+    border-color: transparent;
+}
+
+.resume-btn:hover {
+    transform: translateY(-3px) translateZ(0);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    background: #111111;
+}
+
+/* ── Responsive ──────────────────────────────────── */
+@media (max-width: 860px) {
+    .contact-glass { padding: 48px 36px; }
+}
+
+@media (max-width: 768px) {
+    .contact06-section { padding: 60px 16px; }
+
+    .contact-glass {
+        padding: 32px 24px;
+        border-radius: 20px;
+    }
+
+    .c06-btns {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .c06-btn,
+    .resume-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Email button overflow fix — only targets the long email text */
+.c06-btn.email span {
+    overflow-wrap: anywhere;
+    word-break: break-all;
+}
+
+@media (max-width: 480px) {
+    .c06-btn.email {
+        font-size: 14px;
+        padding: 12px 16px;
+        line-height: 1.3;
+    }
+}
+
+
+/* =========================================
+   Footer Contact Bar
+   ========================================= */
+.portfolio-footer {
+    height: 80px;
+    background: rgba(255, 255, 255, 0.03);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 0 80px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    position: relative;
+    z-index: 10;
+}
+
+.footer-logo img {
+    height: 32px;
+    width: auto;
+    display: block;
+    opacity: 0.9;
+    transition: opacity 0.3s ease;
+}
+
+.footer-logo:hover img {
+    opacity: 1;
+}
+
+.footer-links {
+    display: flex;
+    align-items: center;
+    gap: 40px;
+}
+
+.footer-link {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-color);
+    text-decoration: none;
+    font-size: 0.95rem;
+    font-weight: 400;
+    opacity: 0.7;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    will-change: transform, opacity;
+}
+
+.footer-link:hover {
+    opacity: 1;
+    transform: translateY(-2px);
+}
+
+.footer-icon {
+    width: 20px;
+    height: 20px;
+    color: var(--text-color);
+}
+
+/* Footer Responsiveness */
+@media (max-width: 850px) {
+    .portfolio-footer {
+        padding: 0 40px;
+    }
+}
+
+@media (max-width: 768px) {
+    .portfolio-footer {
+        flex-direction: column;
+        justify-content: center;
+        height: auto;
+        padding: 32px 20px;
+        gap: 20px;
+        text-align: center;
+    }
+    
+    .footer-links {
+        flex-direction: column;
+        gap: 16px;
+    }
+}
+
+/* =========================================
+   Fullscreen Video Modal
+   ========================================= */
+.video-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.4s ease, visibility 0.4s ease;
+}
+
+.video-modal.active {
+    visibility: visible;
+    opacity: 1;
+}
+
+.modal-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+}
+
+.modal-content {
+    position: relative;
+    z-index: 2;
+    width: 90%;
+    max-width: 1200px;
+    max-height: 90vh; /* Protect against absolute vertical blowouts */
+    display: flex;
+    justify-content: center;
+    border-radius: 12px;
+    overflow: hidden;
+    transform: translateZ(0); /* Hardware accelerate full-screen playback container only */
+    will-change: transform;
+}
+
+.modal-content video {
+    width: auto;
+    height: auto;
+    max-width: 90vw;
+    max-height: 90vh;
+    border-radius: 12px;
+    box-shadow: 0 40px 100px rgba(0,0,0,0.5);
+    background: black;
+    outline: none;
+    object-fit: contain; /* Prevents stretching lag/stutter */
+}
+
+.modal-close {
+    position: absolute;
+    top: 2rem;
+    right: 3rem;
+    z-index: 5;
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 3rem;
+    font-weight: 300;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.modal-close:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+@media (max-width: 768px) {
+    .modal-close {
+        top: 1rem;
+        right: 1.5rem;
+    }
+}
